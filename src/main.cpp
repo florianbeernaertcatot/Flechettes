@@ -144,7 +144,7 @@ void display301Page(WiFiClient client){
             client.println("<input type=\"text\" id=\"player3\" required minlength=\"3\" maxlength=\"8\" size=\"10\"><br>");
             client.println("<p>Joueur 4");
             client.println("<input type=\"text\" id=\"player4\" required minlength=\"3\" maxlength=\"8\" size=\"10\"><br>");
-            client.println("<a href=\"/301/game\">Jouer !</a>/");
+            client.println("<p><a href=\"/301/game\"><button class=\"button\">Jouer !</button></a></p>");
             client.println();
 }
 
