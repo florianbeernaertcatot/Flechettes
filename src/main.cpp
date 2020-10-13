@@ -1,20 +1,28 @@
-/*********
-  Rui Santos
-  Complete project details at https://randomnerdtutorials.com  
-*********/
-
-// Load Wi-Fi library
 #include <WiFi.h>
 
 void displayHomePage(WiFiClient client);
 void display301Page(WiFiClient client);
 void display301GamePage(WiFiClient client);
+void getPlayerNames(String args);
 
 
 // Replace with your network credentials
 const char* ssid     = "ESP32-Flechettes";
-const char* password = "123456789";
-const char* mode = "";
+const char* password = "azerty12345";
+
+
+String mode = "";
+String player1 = "";
+String player2 = "";
+String player3 = "";
+String player4 = "";
+
+int p1 = 301;
+int p2 = 301;
+int p3 = 301;
+int p4 = 301;
+
+
 
 // Set web server port number to 80
 WiFiServer server(80);
@@ -55,12 +63,18 @@ void loop(){
           // WEB CONTROLLER WHICH REDIRECTS BY URL
           if (currentLine.length() == 0)
           {
+            if (header.indexOf("GET /301/game?") >= 0){
+              String args = header.substring(0, header.indexOf("\n"));
+              getPlayerNames(args);
+              display301GamePage(client);
+              mode = "301";
+            } else
+            if (header.indexOf("GET /301/game") >= 0){
+              display301GamePage(client);
+              mode = "301";
+            } else
             if (header.indexOf("GET /301") >= 0){
               display301Page(client);
-              mode = "301";
-            }
-            else if (header.indexOf("GET /301/game") >= 0){
-              display301GamePage(client);
               mode = "301";
             }
             else {
@@ -81,6 +95,33 @@ void loop(){
     client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
+  }
+}
+
+void getPlayerNames(String args){
+  String name = "";
+  int begin = 0;
+  int end = 0;
+  for (size_t i=0; i < args.length(); i++){
+    if(args.charAt(i) == '='){
+      begin = i;
+    }
+    if(args.charAt(i) == '&' || (begin != 0 && args.charAt(i) == ' ')){
+      end = i;
+      name = args.substring(begin+1, end);
+      if(player1 == ""){
+        player1 = name;
+      } else
+      if(player2 == ""){
+        player2 = name;
+      } else
+      if(player3 == ""){
+        player3 = name;
+      } else  
+      if(player4 == ""){
+        player4 = name;
+      }
+    }
   }
 }
 
@@ -136,15 +177,17 @@ void display301Page(WiFiClient client){
             client.println("<body><h1>ESP32 My Dart Game</h1>");
             client.println("<p><h1>301 :</h1> Bienvenue au 301 </p>");
             client.println("<br><p>Ajoutez vos joueurs :</p>");
+            client.println("<form action=\"/301/game\" method=\"GET\">");
             client.println("<p>Joueur 1");
-            client.println("<input type=\"text\" id=\"player1\" required minlength=\"3\" maxlength=\"8\" size=\"10\"><br>");
+            client.println("<input type=\"text\" name=\"player1\"><br>");
             client.println("<p>Joueur 2");
-            client.println("<input type=\"text\" id=\"player2\" required minlength=\"3\" maxlength=\"8\" size=\"10\"><br>");
+            client.println("<input type=\"text\" name=\"player2\"><br>");
             client.println("<p>Joueur 3");
-            client.println("<input type=\"text\" id=\"player3\" required minlength=\"3\" maxlength=\"8\" size=\"10\"><br>");
+            client.println("<input type=\"text\" name=\"player3\"><br>");
             client.println("<p>Joueur 4");
-            client.println("<input type=\"text\" id=\"player4\" required minlength=\"3\" maxlength=\"8\" size=\"10\"><br>");
-            client.println("<a href=\"/301/game\">Jouer !</a>/");
+            client.println("<input type=\"text\" name=\"player4\"><br>");
+            client.println("<input type=\"submit\"/>");
+            client.println("</from>");
             client.println();
 }
 
@@ -170,5 +213,10 @@ void display301GamePage(WiFiClient client){
             client.println("<body><h1>ESP32 My Dart Game</h1>");
             client.println("<p><h1>301 :</h1> Vous pouvez jouer !</p>");
             client.println("<p style=\"color:red\">Suivez les scores sur l'écran du board !</p>");
+            client.println("<br><p>" + player1 + ": " + p1 + " points");
+            client.println("<br><p>" + player2 + ": " + p2 + " points");
+            client.println("<br><p>" + player3 + ": " + p3 + " points");
+            client.println("<br><p>" + player4 + ": " + p4 + " points");
+
             client.println();
 }
