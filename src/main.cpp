@@ -5,7 +5,8 @@
 int masterLines = 10; //Change here to the number of lines of your Master Layer
 int slaveLines = 7; //Change here to the number of lines of your Slave Layer
 int matrixMaster[] = {32, 33, 25, 26, 27, 14, 12, 13, 15, 2}; //Put here the pins you connected the lines of your Master Layer 
-int matrixSlave[] = {23, 22, 21, 19, 18, 5, 4}; //Put here the pins you connected the lines of your Slave Layer
+//int matrixSlave[] = {23, 22, 21, 19, 18, 5, 4}; //Put here the pins you connected the lines of your Slave Layer
+int matrixSlave[] = {4,5,18,19,21,22,23}; //Put here the pins you connected the lines of your Slave Layer
 
 int matrixScore[7][10] = {
   {27,36,15,60,3,54,12,39,18,30},
@@ -47,7 +48,6 @@ void loop() {
 }
 */
 
-
 /*
 #################################################
 #################################################
@@ -56,10 +56,10 @@ void loop() {
 #################################################
 */
 
-
 #include <WiFi.h>
+#include <Arduino.h>
 
-int getShot();
+void getShot();
 void handleGame();
 void displayHome(WiFiClient client);
 void displayPlayers(WiFiClient client);
@@ -70,6 +70,20 @@ void getPlayerNames(String args);
 // network credentials
 const char* ssid     = "ESP32-Flechettes";
 const char* password = "azerty12345";
+
+int masterLines = 10; //Change here to the number of lines of your Master Layer
+int slaveLines = 7; //Change here to the number of lines of your Slave Layer
+int matrixMaster[] = {32, 33, 25, 26, 27, 14, 12, 13, 15, 2}; //Put here the pins you connected the lines of your Master Layer 
+int matrixSlave[] = {4,5,18,19,21,22,23}; //Put here the pins you connected the lines of your Slave Layer
+int matrixScore[7][10] = {
+  {27,36,15,60,3,54,12,39,18,30},
+  {18,24,10,40,2,36,8,26,12,20},
+  {9,12,5,20,1,18,4,13,6,10},
+  {50,25,0,0,0,0,0,0,0,0},
+  {14,11,8,16,7,19,3,17,2,15},
+  {28,22,16,32,14,38,6,34,4,30},
+  {42,33,24,48,21,57,9,51,6,45}
+};
 
 // game variables
 String mode = "";
@@ -84,6 +98,7 @@ int p3 = 0;
 int p4 = 0;
 
 int currentShot = 0;
+int currentRound = 1;
 
 // Expose server on port X.X.X.X:80
 WiFiServer server(80);
@@ -92,7 +107,15 @@ WiFiServer server(80);
 String header;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(9600);     
+    for(int i = 0; i < slaveLines; i++){         
+        pinMode(matrixSlave[i], INPUT_PULLUP);     
+    }
+   for(int i = 0; i < masterLines; i++){         
+       pinMode(matrixMaster[i], OUTPUT);         
+       digitalWrite(matrixMaster[i], HIGH);     
+   } 
+
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Setting AP (Access Point)…");
   // Remove the password parameter, if you want the AP (Access Point) to be open
@@ -107,6 +130,8 @@ void setup() {
 
 void loop() {
   WiFiClient client = server.available();
+
+  getShot();
 
   if (client) {
     Serial.println("New Client.");
@@ -356,31 +381,38 @@ void displayConfirmPlayers(WiFiClient client){
             client.println();
 }
 
-void handleGame(){
-  while(p1 != 0 && p2 != 0 && p3 != 0 && p4 != 0){
-    currentShot = getShot();
-    if(currentShot !=0 ){
-      p1 = currentShot;
-    }
-
-    currentShot = getShot();
-    if(currentShot !=0 ){
-      p2 = currentShot;
-    }
-
-    currentShot = getShot();
-    if(currentShot !=0 ){
-      p3 = currentShot;
-    }
-
-    currentShot = getShot();
-    if(currentShot !=0 ){
-      p4 = currentShot;
-    }
-  }
-}
-
-int getShot(){
-  // return current shot point ortherwise return 0
-  return 0;
+void getShot(){
+      for(int i = 0; i < masterLines; i++){         
+        digitalWrite(matrixMaster[i], LOW);         
+        for(int j = 0; j < slaveLines; j++){             
+            if(digitalRead(matrixSlave[j]) == LOW){  
+                  currentShot = matrixScore[j][i];
+                  Serial.println(currentShot);
+                  delay(500);
+                  if(currentRound >= 1 && currentRound <= 3){
+                    p1 -= currentShot;
+                    Serial.println(p1);
+                  }
+                  if(currentRound >= 4 && currentRound <= 6){
+                    p2 -= currentShot;
+                    Serial.println(p2);
+                  }
+                  if(currentRound >= 7 && currentRound <= 9){
+                    p3 -= currentShot;
+                    Serial.println(p3);
+                  }
+                  if(currentRound >= 10 && currentRound <= 12){
+                    p4 -= currentShot;
+                    Serial.println(p4);
+                  }
+                  currentRound ++;
+                  if(currentRound == 12){
+                    currentRound = 0;
+                  }
+                    
+                  
+            }         
+        }         
+        digitalWrite(matrixMaster[i], HIGH);     
+    } 
 }
