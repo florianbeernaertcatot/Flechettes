@@ -1,35 +1,95 @@
+/*
+#include <WiFi.h>
+#include <Arduino.h>
+
+int masterLines = 10; //Change here to the number of lines of your Master Layer
+int slaveLines = 7; //Change here to the number of lines of your Slave Layer
+int matrixMaster[] = {32, 33, 25, 26, 27, 14, 12, 13, 15, 2}; //Put here the pins you connected the lines of your Master Layer 
+int matrixSlave[] = {23, 22, 21, 19, 18, 5, 4}; //Put here the pins you connected the lines of your Slave Layer
+
+int matrixScore[7][10] = {
+  {27,36,15,60,3,54,12,39,18,30},
+  {18,24,10,40,2,36,8,26,12,20},
+  {9,12,5,20,1,18,4,13,6,10},
+  {50,25,0,0,0,0,0,0,0,0},
+  {14,11,8,16,7,19,3,17,2,15},
+  {28,22,16,32,14,38,6,34,4,30},
+  {42,33,24,48,21,57,9,51,6,45}
+};
+
+void setup() {     
+    Serial.begin(9600);     
+    for(int i = 0; i < slaveLines; i++){         
+        pinMode(matrixSlave[i], INPUT_PULLUP);     
+    }
+   for(int i = 0; i < masterLines; i++){         
+       pinMode(matrixMaster[i], OUTPUT);         
+       digitalWrite(matrixMaster[i], HIGH);     
+   } 
+}
+
+void loop() {     
+    for(int i = 0; i < masterLines; i++){         
+        digitalWrite(matrixMaster[i], LOW);         
+        for(int j = 0; j < slaveLines; j++){             
+            if(digitalRead(matrixSlave[j]) == LOW){  
+                  Serial.print(matrixScore[j][i]);
+                  Serial.print(" => ");
+                  Serial.print(i);
+                  Serial.print(",");
+                  Serial.println(j);
+                  delay(500);        
+                  break;             
+            }         
+        }         
+        digitalWrite(matrixMaster[i], HIGH);     
+    } 
+}
+*/
+
+
+/*
+#################################################
+#################################################
+#################################################
+#################################################
+#################################################
+*/
+
+
 #include <WiFi.h>
 
-void displayHomePage(WiFiClient client);
-void display301Page(WiFiClient client);
-void display301GamePage(WiFiClient client);
+int getShot();
+void handleGame();
+void displayHome(WiFiClient client);
+void displayPlayers(WiFiClient client);
+void displayConfirmPlayers(WiFiClient client);
+void displayScores(WiFiClient client);
 void getPlayerNames(String args);
 
-
-// Replace with your network credentials
+// network credentials
 const char* ssid     = "ESP32-Flechettes";
 const char* password = "azerty12345";
 
-
+// game variables
 String mode = "";
 String player1 = "";
 String player2 = "";
 String player3 = "";
 String player4 = "";
 
-int p1 = 301;
-int p2 = 301;
-int p3 = 301;
-int p4 = 301;
+int p1 = 0;
+int p2 = 0;
+int p3 = 0;
+int p4 = 0;
 
+int currentShot = 0;
 
-
-// Set web server port number to 80
+// Expose server on port X.X.X.X:80
 WiFiServer server(80);
 
 // Variable to store the HTTP request
 String header;
-
 
 void setup() {
   Serial.begin(9600);
@@ -45,44 +105,80 @@ void setup() {
   server.begin();
 }
 
-void loop(){
-  WiFiClient client = server.available();   // Listen for incoming clients
+void loop() {
+  WiFiClient client = server.available();
 
-  if (client) {                             // If a new client connects,
-    Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
+  if (client) {
+    Serial.println("New Client.");
+    String currentLine = "";
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+        Serial.write(c);
         header += c;
         if (c == '\n')
-        { // if the byte is a newline character
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
+        {
           // WEB CONTROLLER WHICH REDIRECTS BY URL
           if (currentLine.length() == 0)
           {
-            if (header.indexOf("GET /301/game?") >= 0){
+            if(header.indexOf("GET /scores") >= 0){
+              displayScores(client);
+            } else
+            if (header.indexOf("GET /confirmPlayers?") >= 0)
+            {
+              // getting first line of HTTP header
               String args = header.substring(0, header.indexOf("\n"));
+              // splitting args like ?arg1=value1&arg2=value2&...
+              // then getting values
               getPlayerNames(args);
-              display301GamePage(client);
-              mode = "301";
+              displayConfirmPlayers(client);
             } else
-            if (header.indexOf("GET /301/game") >= 0){
-              display301GamePage(client);
+            if (header.indexOf("GET /301") >= 0)
+            {
               mode = "301";
+              player1 = "";
+              player2 = "";
+              player3 = "";
+              player4 = "";
+              p1 = 301;
+              p2 = 301;
+              p3 = 301;
+              p4 = 301;
+              displayPlayers(client);
             } else
-            if (header.indexOf("GET /301") >= 0){
-              display301Page(client);
-              mode = "301";
-            }
-            else {
-              displayHomePage(client);
+            if (header.indexOf("GET /501") >= 0)
+            {
+              mode = "501";
+              player1 = "";
+              player2 = "";
+              player3 = "";
+              player4 = "";
+              p1 = 501;
+              p2 = 501;
+              p3 = 501;
+              p4 = 501;
+              displayPlayers(client);
+            } else
+            if (header.indexOf("GET /701") >= 0)
+            {
+              mode = "701";
+              player1 = "";
+              player2 = "";
+              player3 = "";
+              player4 = "";
+              p1 = 701;
+              p2 = 701;
+              p3 = 701;
+              p4 = 701;
+              displayPlayers(client);
+            } else
+            {
               mode = "";
+              displayHome(client);
             }
             break;
-          } else { // if you got a newline, then clear currentLine
+          } else
+          { // if you got a newline, then clear currentLine
             currentLine = "";
           }
         }
@@ -125,7 +221,7 @@ void getPlayerNames(String args){
   }
 }
 
-void displayHomePage(WiFiClient client){
+void displayHome(WiFiClient client){
               // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
@@ -144,18 +240,18 @@ void displayHomePage(WiFiClient client){
             client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
             client.println(".button2 {background-color: #555555;}</style></head>");
             
-            // Web Page Heading
-            client.println("<body><h1>ESP32 My Dart Game</h1>");
+            client.println("<body><a style=\"color:#4CAF50;text-decoration:none;\" href=\"/\"><h1>ESP32 My Dart Game</h1></a>");
             
-            // Display play mode with link
-            client.println("<p><h1>301 :</h1> Chaque joueur tire a tour de role avec un score de base de 301. On soustrait les scores realises aux totaux des joueurs au fur et a mesure de la partie. Le but du jeu est alors d’etre le premier a atteindre zero pour remporter la partie!</p>");
+            client.println("<h2>Choisissez votre mode de jeu :</h2>");
             client.println("<p><a href=\"/301\"><button class=\"button\">Jouer au 301</button></a></p>");
+            client.println("<p><a href=\"/501\"><button class=\"button\">Jouer au 501</button></a></p>");
+            client.println("<p><a href=\"/701\"><button class=\"button\">Jouer au 701</button></a></p>");
             
             // The HTTP response ends with another blank line
             client.println();
 }
 
-void display301Page(WiFiClient client){
+void displayPlayers(WiFiClient client){
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
@@ -174,10 +270,10 @@ void display301Page(WiFiClient client){
             client.println(".button2 {background-color: #555555;}</style></head>");
             
             // body
-            client.println("<body><h1>ESP32 My Dart Game</h1>");
-            client.println("<p><h1>301 :</h1> Bienvenue au 301 </p>");
+            client.println("<body><a style=\"color:#4CAF50;text-decoration:none;\" href=\"/\"><h1>ESP32 My Dart Game</h1></a>");
+            client.println("<h2>Bienvenue au mode " + mode + " </h2>");
             client.println("<br><p>Ajoutez vos joueurs :</p>");
-            client.println("<form action=\"/301/game\" method=\"GET\">");
+            client.println("<form action=\"/confirmPlayers\" method=\"GET\">");
             client.println("<p>Joueur 1");
             client.println("<input type=\"text\" name=\"player1\"><br>");
             client.println("<p>Joueur 2");
@@ -191,7 +287,42 @@ void display301Page(WiFiClient client){
             client.println();
 }
 
-void display301GamePage(WiFiClient client){
+void displayScores(WiFiClient client){
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            // and a content-type so the client knows what's coming, then a blank line:
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println("Connection: close");
+            client.println();
+            
+            // HTML Skeleton + HEAD
+            client.println("<!DOCTYPE html><html>");
+            client.println("<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            client.println("<link rel=\"icon\" href=\"data:,\">");
+            client.println("<meta http-equiv=\"refresh\" content=\"1\">");
+            // CSS
+            client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+            client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+            client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+            client.println(".button2 {background-color: #555555;}</style></head>");
+            
+            // body
+            client.println("<body><a style=\"color:#4CAF50;text-decoration:none;\" href=\"/\"><h1>ESP32 My Dart Game</h1></a>");
+            client.println("<p>Vous pouvez jouer  au <b>" + mode + "</b> !</p>");
+            client.println("<p style=\"color:red\">Suivez les scores sur l'écran du board !</p>");
+            if(player1 != "")
+              client.println("<br><p>" + player1 + ": " + p1 + " points");
+            if(player2 != "")
+              client.println("<br><p>" + player2 + ": " + p2 + " points");
+            if(player3 != "")
+              client.println("<br><p>" + player3 + ": " + p3 + " points");
+            if(player4 != "")
+              client.println("<br><p>" + player4 + ": " + p4 + " points");
+
+            client.println();
+}
+
+void displayConfirmPlayers(WiFiClient client){
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
@@ -210,13 +341,46 @@ void display301GamePage(WiFiClient client){
             client.println(".button2 {background-color: #555555;}</style></head>");
             
             // body
-            client.println("<body><h1>ESP32 My Dart Game</h1>");
-            client.println("<p><h1>301 :</h1> Vous pouvez jouer !</p>");
-            client.println("<p style=\"color:red\">Suivez les scores sur l'écran du board !</p>");
-            client.println("<br><p>" + player1 + ": " + p1 + " points");
-            client.println("<br><p>" + player2 + ": " + p2 + " points");
-            client.println("<br><p>" + player3 + ": " + p3 + " points");
-            client.println("<br><p>" + player4 + ": " + p4 + " points");
+            client.println("<body><a style=\"color:#4CAF50;text-decoration:none;\" href=\"/\"><h1>ESP32 My Dart Game</h1></a>");
+            client.println("<p>Vous pouvez jouer  au <b>" + mode + "</b> !</p>");
+            if(player1 != "")
+              client.println("<br><p>" + player1 + ": " + p1 + " points");
+            if(player2 != "")
+              client.println("<br><p>" + player2 + ": " + p2 + " points");
+            if(player3 != "")
+              client.println("<br><p>" + player3 + ": " + p3 + " points");
+            if(player4 != "")
+              client.println("<br><p>" + player4 + ": " + p4 + " points");
+            client.println("<p><a href=\"/scores\"><button class=\"button\">Confirmer</button></a></p>");
 
             client.println();
+}
+
+void handleGame(){
+  while(p1 != 0 && p2 != 0 && p3 != 0 && p4 != 0){
+    currentShot = getShot();
+    if(currentShot !=0 ){
+      p1 = currentShot;
+    }
+
+    currentShot = getShot();
+    if(currentShot !=0 ){
+      p2 = currentShot;
+    }
+
+    currentShot = getShot();
+    if(currentShot !=0 ){
+      p3 = currentShot;
+    }
+
+    currentShot = getShot();
+    if(currentShot !=0 ){
+      p4 = currentShot;
+    }
+  }
+}
+
+int getShot(){
+  // return current shot point ortherwise return 0
+  return 0;
 }
