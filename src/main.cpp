@@ -66,6 +66,7 @@ void displayPlayers(WiFiClient client);
 void displayConfirmPlayers(WiFiClient client);
 void displayScores(WiFiClient client);
 void getPlayerNames(String args);
+void displayWin(WiFiClient client);
 
 // network credentials
 const char* ssid     = "ESP32-Flechettes";
@@ -87,10 +88,12 @@ int matrixScore[7][10] = {
 
 // game variables
 String mode = "";
+int nbPlayer = 0;
 String player1 = "";
 String player2 = "";
 String player3 = "";
 String player4 = "";
+String winnerPlayer = "";
 
 int p1 = 0;
 int p2 = 0;
@@ -146,6 +149,9 @@ void loop() {
           // WEB CONTROLLER WHICH REDIRECTS BY URL
           if (currentLine.length() == 0)
           {
+            if(winnerPlayer != ""){
+              displayWin(client);
+            } else
             if(header.indexOf("GET /scores") >= 0){
               displayScores(client);
             } else
@@ -199,6 +205,18 @@ void loop() {
             } else
             {
               mode = "";
+              player1 = "";
+              player2 = "";
+              player3 = "";
+              player4 = "";
+              nbPlayer = 0;
+              winnerPlayer = "";
+              p1 = 0;
+              p2 = 0;
+              p3 = 0;
+              p4 = 0;
+              currentRound = 1;
+              currentShot = 0;
               displayHome(client);
             }
             break;
@@ -232,15 +250,19 @@ void getPlayerNames(String args){
       name = args.substring(begin+1, end);
       if(player1 == ""){
         player1 = name;
+        nbPlayer++;
       } else
       if(player2 == ""){
         player2 = name;
+        nbPlayer++;
       } else
       if(player3 == ""){
         player3 = name;
+        nbPlayer++;
       } else  
       if(player4 == ""){
         player4 = name;
+        nbPlayer++;
       }
     }
   }
@@ -312,6 +334,31 @@ void displayPlayers(WiFiClient client){
             client.println();
 }
 
+void displayWin(WiFiClient client){
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            // and a content-type so the client knows what's coming, then a blank line:
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-type:text/html");
+            client.println("Connection: close");
+            client.println();
+            
+            // HTML Skeleton + HEAD
+            client.println("<!DOCTYPE html><html>");
+            client.println("<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            client.println("<link rel=\"icon\" href=\"data:,\">");
+            // CSS
+            client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+            client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+            client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+            client.println(".button2 {background-color: #555555;}</style></head>");
+            
+            // body
+            client.println("<body><a style=\"color:#4CAF50;text-decoration:none;\" href=\"/\"><h1>ESP32 My Dart Game</h1></a>");
+            client.println("<p>Félicitations à <b>" + winnerPlayer + "</b>, vous avez gagné au " + mode + " !</p>");
+
+            client.println();
+}
+
 void displayScores(WiFiClient client){
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
@@ -334,7 +381,6 @@ void displayScores(WiFiClient client){
             // body
             client.println("<body><a style=\"color:#4CAF50;text-decoration:none;\" href=\"/\"><h1>ESP32 My Dart Game</h1></a>");
             client.println("<p>Vous pouvez jouer  au <b>" + mode + "</b> !</p>");
-            client.println("<p style=\"color:red\">Suivez les scores sur l'écran du board !</p>");
             if(player1 != "")
               client.println("<br><p>" + player1 + ": " + p1 + " points");
             if(player2 != "")
@@ -389,6 +435,18 @@ void getShot(){
                   currentShot = matrixScore[j][i];
                   Serial.println(currentShot);
                   delay(500);
+                  if(p1 <= 0){
+                    winnerPlayer = player1;
+                  }
+                  if(p2 <= 0){
+                    winnerPlayer = player2;
+                  }
+                  if(p3 <= 0){
+                    winnerPlayer = player3;
+                  }
+                  if(p4 <= 0){
+                    winnerPlayer = player4;
+                  }
                   if(currentRound >= 1 && currentRound <= 3){
                     p1 -= currentShot;
                     Serial.println(p1);
@@ -406,11 +464,9 @@ void getShot(){
                     Serial.println(p4);
                   }
                   currentRound ++;
-                  if(currentRound == 12){
-                    currentRound = 0;
+                  if(currentRound == (nbPlayer*3)){
+                    currentRound = 1;
                   }
-                    
-                  
             }         
         }         
         digitalWrite(matrixMaster[i], HIGH);     
